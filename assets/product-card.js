@@ -64,6 +64,9 @@ class ProductCard extends HTMLElement {
       this.hoverImage.src    = swatch.dataset.hoverSrc;
       this.hoverImage.srcset = swatch.dataset.hoverSrcset || '';
     }
+
+    // Always reset to primary after a swatch click — even if card is mid-hover
+    this._hideHoverImage();
   }
 
   _setActiveSwatch(activeSwatch) {
@@ -89,8 +92,7 @@ class ProductCard extends HTMLElement {
     this.addEventListener('mouseenter', () => this._showHoverImage());
     this.addEventListener('mouseleave', () => this._hideHoverImage());
 
-    // Touch devices: tap once to hover, tap again to follow link
-    this.addEventListener('touchstart', () => this._showHoverImage(), { passive: true });
+
   }
 
   _showHoverImage() {
