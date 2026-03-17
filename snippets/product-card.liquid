@@ -14,10 +14,6 @@
   - variant.featured_image         → primary image per colour
   - variant.metafields.custom.hover_image → secondary image per colour
   - variant.metafields.custom.swatch_color → hex value for swatch dot
-
-  Assets (upload to /assets):
-    tshirt-[color]-primary.png
-    tshirt-[color]-secondary.png
 {% endcomment %}
 
 {% assign current_variant = product.selected_or_first_available_variant %}
@@ -111,7 +107,7 @@
           data-primary-src="{{ variant.featured_image | image_url: width: 600 }}"
           data-primary-srcset="{{ variant.featured_image | image_url: width: 400 }} 400w, {{ variant.featured_image | image_url: width: 800 }} 800w"
           data-hover-src="{{ variant.metafields.custom.hover_image | default: product.images[0] | image_url: width: 600 }}"
-          data-primary-srcset="{{ variant.featured_image | default: product.images[0] | image_url: width: 400 }} 400w, {{ variant.featured_image | default: product.images[0] | image_url: width: 800 }} 800w"
+          data-hover-srcset="{{ variant.metafields.custom.hover_image | default: product.images[0] | image_url: width: 400 }} 400w, {{ variant.metafields.custom.hover_image | default: product.images[0] | image_url: width: 800 }} 800w"
           data-price="{{ variant.price }}"
           data-compare-price="{{ variant.compare_at_price }}"
           data-available="{{ variant.available }}"
