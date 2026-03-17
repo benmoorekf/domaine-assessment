@@ -1,92 +1,103 @@
-# Horizon
+# Domaine Studio — Product Card Assessment
 
-[Getting started](#getting-started) |
-[Staying up to date with Horizon changes](#staying-up-to-date-with-horizon-changes) |
-[Developer tools](#developer-tools) |
-[Contributing](#contributing) |
-[License](#license)
+A product card component built for the Domaine Studio technical assessment. Built on the Horizon theme using Liquid, vanilla JavaScript, and TailwindCSS.
 
-Horizon is the flagship of a new generation of first party Shopify themes. It incorporates the latest Liquid Storefronts features, including [theme blocks](https://shopify.dev/docs/storefronts/themes/architecture/blocks/theme-blocks/quick-start?framework=liquid).
+**Live preview:** https://ben-moore-new-dev.myshopify.com/collections/all
 
-- **Web-native in its purest form:** Themes run on the [evergreen web](https://www.w3.org/2001/tag/doc/evergreen-web/). We leverage the latest web browsers to their fullest, while maintaining support for the older ones through progressive enhancement—not polyfills.
-- **Lean, fast, and reliable:** Functionality and design defaults to “no” until it meets this requirement. Code ships on quality. Themes must be built with purpose. They shouldn’t support each and every feature in Shopify.
-- **Server-rendered:** HTML must be rendered by Shopify servers using Liquid. Business logic and platform primitives such as translations and money formatting don’t belong on the client. Async and on-demand rendering of parts of the page is OK, but we do it sparingly as a progressive enhancement.
-- **Functional, not pixel-perfect:** The Web doesn’t require each page to be rendered pixel-perfect by each browser engine. Using semantic markup, progressive enhancement, and clever design, we ensure that themes remain functional regardless of the browser.
+---
 
-## Getting started
+## What was built
 
-We recommend using the Skeleton Theme as a starting point for a theme development project. [Learn more on Shopify.dev](https://shopify.dev/themes/getting-started/create).
+A fully interactive product card component satisfying all user stories:
 
-To create a new theme project based on Horizon:
+- Sale badge and markdown pricing driven by variant-level `compare_at_price`
+- Colour variant swatches that swap the primary product image on click
+- Secondary on-model image revealed on card hover via opacity transition
+- Product title, brand name, and pricing rendered from Shopify product data
 
-```sh
-git clone https://github.com/Shopify/horizon.git
+---
+
+## File structure
+
+```
+snippets/
+  product-card.liquid     — Card markup, Liquid logic, Tailwind classes
+
+assets/
+  product-card.js         — Web Component handling all interactions
+
+layout/
+  theme.liquid            — Tailwind CDN added to <head>
 ```
 
-Install the [Shopify CLI](https://shopify.dev/docs/storefronts/themes/tools/cli) to connect your local project to a Shopify store. Learn about the [theme developer tools](https://shopify.dev/docs/storefronts/themes/tools) available, and the suggested [developer tools](#developer-tools) below.
+The card is a **snippet, not a section** — keeping it decoupled and reusable across collection pages, featured product sections, and any other context that needs to render a product card.
 
-Please note that the `main` branch may include code for features not yet released. You may encounter Liquid API properties that are not publicly documented, but will be when the feature is officially rolled out.
+---
 
-### Shopify Theme Store development
+## Technical decisions
 
-If you're building a theme for the Shopify Theme Store, then do not use Horizon as a starting point. Themes based on, derived from, or incorporating Horizon are not eligible for submission to to the Shopify Theme Store. Use the [Skeleton Theme](https://github.com/Shopify/skeleton-theme) instead.
+### Vanilla JS Web Component
 
-## Staying up to date with Horizon changes
+All interaction logic lives in a single `ProductCard` class registered via `customElements.define('product-card', ProductCard)`.
 
-Say you're building a new theme off Horizon but you still want to be able to pull in the latest changes, you can add a remote `upstream` pointing to this Horizon repository.
+No framework was used. Three event listeners (swatch click, mouseenter, mouseleave) don't warrant a framework dependency — adding one would introduce build complexity and runtime weight with no meaningful benefit at this scope.
 
-1. Navigate to your local theme folder.
-2. Verify the list of remotes and validate that you have both an `origin` and `upstream`:
+This pattern intentionally mirrors Horizon's own component architecture. Horizon defines `cart-notification`, `localization-form`, and others as Web Components. Matching that pattern keeps the card idiomatic to the theme and immediately familiar to any developer who has worked in Horizon before.
 
-```sh
-git remote -v
-```
+### Tailwind via Play CDN
 
-3. If you don't see an `upstream`, you can add one that points to Shopify's Horizon repository:
+Play CDN is the correct choice for this environment. In production delivery this would be replaced with a PostCSS build step to eliminate the runtime overhead of the CDN. The CDN version is not deferred — Tailwind needs to scan the DOM before first render to generate the correct utility classes, so `defer` would cause a flash of unstyled content.
 
-```sh
-git remote add upstream https://github.com/Shopify/horizon.git
-```
+### `aspect-ratio: 4/5` on the image container
 
-4. Pull in the latest Horizon changes into your repository:
+The primary (flat) and secondary (on-model) images have different natural proportions — the flat shirts are roughly square, the on-model images are portrait. A `4/5` container with `object-contain` accommodates both without cropping either. `object-position: bottom` on the hover image ensures the shirt rather than the model's head is the focal point.
 
-```sh
-git fetch upstream
-git pull upstream main
-```
+### Variant-level sale detection
 
-## Developer tools
+Sale state is checked against `variant.compare_at_price` rather than `product.compare_at_price`. This correctly handles products where only specific variants are on sale — product-level checking would show the badge incorrectly on non-sale variants.
 
-There are a number of really useful tools that the Shopify Themes team uses during development. Horizon is already set up to work with these tools.
+### `variant:selected` CustomEvent
 
-### Shopify CLI
+Each swatch click dispatches a `variant:selected` CustomEvent that bubbles up the DOM. This keeps the card compatible with Horizon's ThemeEvents architecture — other sections (a product form, a recently viewed list) can listen for this event without any coupling to the card's internals.
 
-[Shopify CLI](https://shopify.dev/docs/storefronts/themes/tools/cli) helps you build Shopify themes faster and is used to automate and enhance your local development workflow. It comes bundled with a suite of commands for developing Shopify themes—everything from working with themes on a Shopify store (e.g. creating, publishing, deleting themes) or launching a development server for local theme development.
+### Image URLs baked into `data-*` attributes at render time
 
-You can follow this [quick start guide for theme developers](https://shopify.dev/docs/themes/tools/cli) to get started.
+Variant image URLs are written into `data-primary-src` and `data-hover-src` attributes on each swatch button during Liquid render. This means zero API calls on swatch click — the JS reads directly from the DOM. Instant swap, works offline, no loading state needed.
 
-### Theme Check
+### Hover image preloaded
 
-We recommend using [Theme Check](https://github.com/shopify/theme-check) as a way to validate and lint your Shopify themes.
+The secondary image is rendered as a hidden `<img>` tag on page load (`opacity-0`). The browser fetches it immediately so there's no flash or delay on first hover — the opacity transition is instant.
 
-We've added Theme Check to Horizon's [list of VS Code extensions](/.vscode/extensions.json) so if you're using Visual Studio Code as your code editor of choice, you'll be prompted to install the [Theme Check VS Code](https://marketplace.visualstudio.com/items?itemName=Shopify.theme-check-vscode) extension upon opening VS Code after you've forked and cloned Horizon.
+---
 
-You can also run it from a terminal with the following Shopify CLI command:
+## Shopify setup
 
-```bash
-shopify theme check
-```
+**Metafields required on Variants:**
 
-You can follow the [theme check documentation](https://shopify.dev/docs/storefronts/themes/tools/theme-check) for more details.
+| Name | Namespace & key | Type |
+|---|---|---|
+| Swatch color | `custom.swatch_color` | Color |
+| Hover image | `custom.hover_image` | File |
 
-#### Shopify/theme-check-action
+---
 
-Horizon runs [Theme Check](#Theme-Check) on every commit via [Shopify/theme-check-action](https://github.com/Shopify/theme-check-action).
+## What I'd add with more time
 
-## Contributing
+| Feature | Approach | Estimate |
+|---|---|---|
+| Quick-add to cart | `fetch` to Shopify Cart API + `cart:updated` event | 3–4 hrs |
+| Out-of-stock swatch state | `variant.available` check + `disabled` + visual style | 1–2 hrs |
+| Low stock badge | `variant.inventory_quantity` conditional in Liquid | 1 hr |
+| Merchant config via schema | `section.settings` for badge colour, hover toggle | 1 hr |
+| PostCSS build step | Replace Play CDN for production performance | 1 day |
 
-We are not accepting contributions to Horizon at this time.
+---
 
-## License
+## Why these choices fit Domaine Studio
 
-Copyright (c) 2025-present Shopify Inc. See [LICENSE](/LICENSE.md) for further details.
+Studio's model is fast, repeatable delivery for mid-market brands. Every decision here optimises for that:
+
+- No framework means faster onboarding for new devs and no build pipeline to maintain
+- Web Component pattern means the card works anywhere in the theme without modification
+- Snippet architecture means it can be dropped into any section with a single `render` tag
+- Metafield-driven configuration means merchants can manage their own data without code changes
