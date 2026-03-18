@@ -13,6 +13,7 @@
   Expects product variants to have:
   - variant.featured_image         → primary image per colour
   - variant.metafields.custom.hover_image → secondary image per colour
+  
   - variant.metafields.custom.swatch_color → hex value for swatch dot
 {% endcomment %}
 
@@ -56,8 +57,8 @@
         loading="lazy"
         class="absolute inset-0 w-full h-full object-contain object-bottom
                transition-opacity duration-300"
-        height=""
-        width=""
+        width="600"
+        height="750"
       >
     {% endif %}
 
@@ -76,8 +77,8 @@
         loading="lazy"
         class="absolute inset-0 w-full h-full object-contain object-bottom
                opacity-0 transition-opacity duration-300"
-        height=""
-        width=""
+        width="600"
+        height="750"
       >
     {% endif %}
 
